@@ -7,9 +7,10 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 
 import { connectDB } from "./config/db.js";
-import { UserModel, ContentModel } from "./model/content.js";
+import { UserModel, ContentModel, LinkModel } from "./model/content.js";
 import { reqBody, reqBodySignin } from "./validation/user.js";
 import { userMiddleware } from "./middleware.js";
+import { random } from "./utils.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -60,13 +61,11 @@ app.post("/api/v1/signin", async (req, res) => {
 		// This flattens the errors into a simple key-value object
 		// const errorMessages = parsedDataSigninWithSuccess.error.flatten().fieldErrors;
 
-		res.json({
+		return res.status(400).json({
+			// Added 400 status for bad request
 			message: "Incorrect format",
-
-			// lets user know the exact reason for the error
-			error: parsedDataSignin.error,
+			errors: parsedDataSignin.error.flatten().fieldErrors, // Cleaner for frontend
 		});
-		return;
 	}
 
 	const { username, password } = parsedDataSignin.data;
@@ -81,7 +80,6 @@ app.post("/api/v1/signin", async (req, res) => {
 
 	const passwordMatch = await bcrypt.compare(password, user.password as string); // password: send by the user, user.password: password from the db.
 
-	// assuming plain text (NOT recommended)
 	if (!passwordMatch) {
 		return res.status(401).json({
 			message: "Invalid username or password",
@@ -96,12 +94,11 @@ app.post("/api/v1/signin", async (req, res) => {
 			process.env.JWT_PASSWORD as string,
 		);
 
-		res.json({ token });
+		return res.json({
+			message: "User signed in",
+			token,
+		});
 	}
-
-	res.json({
-		message: "User signed in",
-	});
 });
 
 app.post("/api/v1/content", userMiddleware, async (req, res) => {
@@ -133,11 +130,79 @@ app.get("/api/v1/content", userMiddleware, async (req, res) => {
 	});
 });
 
-app.delete("/api/v1/content", async (req, res) => {});
+app.delete("/api/v1/content", userMiddleware, async (req, res) => {});
 
-app.post("/api/v1/brain/share", async (req, res) => {});
+app.post("/api/v1/brain/share", userMiddleware, async (req, res) => {
+	const share = req.body.share;
 
-app.get("/api/v1/brain/:shareLink", async (req, res) => {});
+	if (share) {
+		const existingLink = await LinkModel.findOne({
+			userId: req.userId as string,
+		});
+
+		if (existingLink) {
+			res.json({
+				hash: existingLink.hash,
+			});
+			return;
+		}
+		const hash = random(10);
+		await LinkModel.create({
+			userId: req.userId as string,
+			hash: hash,
+		});
+
+		res.json({
+			message: `/${hash}`,
+		});
+	} else {
+		await LinkModel.deleteOne({
+			userId: req.userId as string,
+		});
+
+		res.json({
+			message: "Link Removed",
+		});
+	}
+});
+
+app.get("/api/v1/brain/:shareLink", async (req, res) => {
+	const hash = req.params.shareLink;
+
+	const link = await LinkModel.findOne({
+		hash,
+	});
+
+	if (!link) {
+		res.status(411).json({
+			message: "Sorry incorrect input",
+		});
+
+		return;
+	}
+
+	const content = await ContentModel.find({
+		userId: link.userId,
+	});
+
+	const userInfo = await UserModel.findOne({
+		_id: link.userId,
+	});
+
+	// console.log(link);
+
+	if (!userInfo) {
+		res.status(411).json({
+			message: "userInfo not found, error should not ideally happen ",
+		});
+
+		return;
+	}
+	res.json({
+		username: userInfo?.username,
+		content: content,
+	});
+});
 
 connectDB().then(() => {
 	app.listen(PORT, () => {
