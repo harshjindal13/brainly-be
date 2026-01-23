@@ -7,7 +7,7 @@ env.config();
 export const userMiddleware = (
 	req: Request,
 	res: Response,
-	next: NextFunction
+	next: NextFunction,
 ) => {
 	const header = req.header("authorization");
 
@@ -21,6 +21,10 @@ export const userMiddleware = (
 
 	if (decoded) {
 		if (typeof decoded === "string") {
+			// An Object (JwtPayload): This happens when the token contains JSON data (claims), which is the standard for 99% of web apps.
+
+			// A String: This happens if the token payload was just a literal string (e.g., jwt.sign("hello", "secret")) rather than an object like { id: 123 }.
+
 			res.status(403).json({
 				message: "You are not logged in",
 			});
