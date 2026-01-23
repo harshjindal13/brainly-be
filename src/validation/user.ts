@@ -8,8 +8,8 @@ export const reqBody = z.object({
 	password: z
 		.string()
 		.regex(
-			/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-			"Password must contain uppercase, lowercase, numbers, and special characters"
+			/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$#!%*?&]{8,}$/,
+			"Password must contain uppercase, lowercase, numbers, and special characters",
 		),
 });
 
@@ -22,6 +22,6 @@ export const reqBodySignin = z.object({
 		.string()
 		.min(
 			8,
-			"Password must contain uppercase, lowercase, numbers, and special characters"
+			"Password must contain uppercase, lowercase, numbers, and special characters",
 		),
 });
