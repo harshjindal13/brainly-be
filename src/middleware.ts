@@ -15,7 +15,14 @@ export const userMiddleware = (
 		return res.status(401).json({ message: "Unauthorized" });
 	}
 
-	const decoded = jwt.verify(header as string, process.env.JWT_PASSWORD);
+	const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : header;
+
+	let decoded: string | JwtPayload;
+	try {
+		decoded = jwt.verify(token, process.env.JWT_PASSWORD);
+	} catch {
+		return res.status(401).json({ message: "Unauthorized" });
+	}
 	// You might want to attach the decoded user information to the request object
 	// req.user = decoded;
 
