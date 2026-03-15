@@ -20,7 +20,7 @@ const ContentSchema = new Schema({
 				value: mongoose.Types.ObjectId,
 			): Promise<boolean> {
 				// Use .exists() for better performance as it returns only the _id or null
-				const user = await model("User").exists({ _id: value });
+				const user = await model("user").exists({ _id: value });
 				return !!user;
 			},
 			message: "The provided userId does not exist in the database.",
