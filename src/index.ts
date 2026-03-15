@@ -102,20 +102,34 @@ app.post("/api/v1/signin", async (req, res) => {
 });
 
 app.post("/api/v1/content", userMiddleware, async (req, res) => {
-	const link = req.body.link;
-	const type = req.body.type;
-	await ContentModel.create({
-		link,
-		type,
-		title: req.body.title,
-		//@ts-ignore
-		userId: req.userId!,
-		tags: [],
-	});
+	try {
+		const link = req.body.link;
+		const type = req.body.type;
 
-	res.json({
-		message: "Content added",
-	});
+		await ContentModel.create({
+			link,
+			type,
+			title: req.body.title,
+			//@ts-ignore
+			userId: req.userId!,
+			tags: [],
+		});
+
+		res.json({
+			message: "Content added",
+		});
+	} catch (e: any) {
+		// Duplicate key (usually unique index) e.g. link already exists
+		if (e?.code === 11000) {
+			return res.status(409).json({
+				message: "This link is already saved.",
+			});
+		}
+
+		return res.status(500).json({
+			message: "Internal Server Error",
+		});
+	}
 });
 
 app.get("/api/v1/content", userMiddleware, async (req, res) => {
@@ -153,7 +167,7 @@ app.post("/api/v1/brain/share", userMiddleware, async (req, res) => {
 		});
 
 		res.json({
-			message: `/${hash}`,
+			hash,
 		});
 	} else {
 		await LinkModel.deleteOne({
